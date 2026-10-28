@@ -1,0 +1,7 @@
+CURRENT SENATE map. Colour by: current_category
+
+TITLE:
+{{ state_name }}
+
+BODY:
+{{ senator_1 ? CONCAT('<div style="margin-top:4px"><div style="font-size:13px;font-weight:700"><span style="color:', (senator_1_party == 'Democrat' ? '#29339b' : (senator_1_party == 'Republican' ? '#b81f14' : '#7a4fb0')), '">■</span> ', senator_1, '</div><div style="font-size:11px;color:#888;padding-left:14px">', (senator_1_party == 'Independent' ? 'Ind., caucuses D' : senator_1_party), ' · since ', senator_1_since, (senator_1_up_in_2026 == 'Yes' ? ' · <b style="color:#333">up in 2026</b>' : ''), '</div></div>') : '' }}{{ senator_2 ? CONCAT('<div style="margin-top:6px"><div style="font-size:13px;font-weight:700"><span style="color:', (senator_2_party == 'Democrat' ? '#29339b' : (senator_2_party == 'Republican' ? '#b81f14' : '#7a4fb0')), '">■</span> ', senator_2, '</div><div style="font-size:11px;color:#888;padding-left:14px">', (senator_2_party == 'Independent' ? 'Ind., caucuses D' : senator_2_party), ' · since ', senator_2_since, (senator_2_up_in_2026 == 'Yes' ? ' · <b style="color:#333">up in 2026</b>' : ''), '</div></div>') : '' }}{{ up_in_2026 == 'No' ? '<div style="font-size:11px;color:#888;margin-top:8px;padding-top:6px;border-top:1px solid #ddd">No Senate race here in 2026</div>' : '' }}

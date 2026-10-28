@@ -1,0 +1,10 @@
+# macOS
+.DS_Store
+
+# Election-night cache of the last good results feed (rewritten every refresh)
+data/live/
+
+# Python / temp files
+__pycache__/
+*.pyc
+*.tmp
