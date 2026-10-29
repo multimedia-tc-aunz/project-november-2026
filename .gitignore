@@ -4,8 +4,10 @@
 # Election-night cache of the last good results feed (rewritten every refresh)
 data/live/
 
+# Generated chart files (rebuilt by the scripts)
+output/
+
 # Python / temp files
 __pycache__/
 *.pyc
 *.tmp
-output/
