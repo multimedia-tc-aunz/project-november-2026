@@ -11,6 +11,8 @@ Election day is Tue 3 Nov 2026 (US). First polls close 6pm ET, which is **10am A
 | `output/senate_bar.csv` | Senate bar | 1 | Stacked bar. 51 seats for a Dem majority, 50 for a Rep majority (VP Vance breaks ties) |
 | `output/house_bar.csv` | House bar | 1 | Stacked bar. 218 for a majority |
 
+Every CSV also has a matching `.json` file next to it (e.g. `output/senate_map.json`, `data/senate_base.json`), written at the same time. Each one is a list of rows, with the same columns in the same order. Number columns are real numbers and blank cells are `null`. Codes like `state_fips` stay as text, so `"01"` keeps its leading zero.
+
 
 ## The three Senate maps
 

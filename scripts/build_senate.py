@@ -7,16 +7,17 @@ Inputs (data/raw/):
   wiki-pvi.json               Wikipedia "Cook Partisan Voting Index" (2025 PVI for every state)
 
 Output:
-  data/senate_base.csv        Everything that doesn't change on election night.
+  data/senate_base.csv/.json  Everything that doesn't change on election night.
                               update_results.py adds the live vote columns.
 
 Run:  python3 scripts/build_senate.py
 """
-import csv
 import json
 import re
 from datetime import date
 from pathlib import Path
+
+from table_io import write_table
 
 ROOT = Path(__file__).resolve().parent.parent
 RAW = ROOT / "data" / "raw"
@@ -378,13 +379,10 @@ def main():
                         "predicted_flip": NO})
         rows.append(row)
 
-    with open(OUT, "w", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=list(rows[0]))
-        w.writeheader()
-        w.writerows(rows)
+    write_table(OUT, rows)
 
     up = [r for r in rows if r["up_in_2026"] == "Yes"]
-    print(f"Wrote {OUT.relative_to(ROOT)}: {len(rows)} rows, {len(up)} races "
+    print(f"Wrote {OUT.relative_to(ROOT)} (+ .json): {len(rows)} rows, {len(up)} races "
           f"({sum(r['race_type'] == 'Special' for r in up)} special)")
     for w_ in warnings:
         print("CHECK:", w_)

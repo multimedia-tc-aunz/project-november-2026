@@ -5,7 +5,7 @@ results pages. It is free but UNOFFICIAL: no guarantee it stays up, keeps its
 format, or isn't blocked. If it breaks, use data/manual_overrides.csv to call
 races by hand (the charts keep working).
 
-Writes:
+Writes (each as .csv and .json):
   output/senate_map.csv   one row per state (no DC), for Datawrapper "USA » States (hexagons)"
                           -> match on column state_code to basemap key "Code"
   output/senate_bar.csv   seat totals incl. the 65 seats not up this year
@@ -25,6 +25,8 @@ import time
 import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
+
+from table_io import write_table
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "data"
@@ -198,7 +200,7 @@ def build_senate(feed, overrides, stamp):
         row["result_status"], row["result_category"] = status_and_category(row)
         row["last_refreshed"] = stamp
         rows.append(row)
-    write_csv(OUT / "senate_map.csv", rows)
+    write_table(OUT / "senate_map.csv", rows)
 
     # Seat totals. Seats not up count for the senator's caucus (King and Sanders -> Dem).
     legislators = json.load(open(DATA / "raw" / "legislators-current.json"))
@@ -228,7 +230,7 @@ def build_senate(feed, overrides, stamp):
         "Rep majority line": SENATE_MAJORITY_R,
         "last_refreshed": stamp,
     }]
-    write_csv(OUT / "senate_bar.csv", bar)
+    write_table(OUT / "senate_bar.csv", bar)
     called = races - undecided
     print(f"  Senate: {called}/{races} called | D {bar[0]['Democrats total']} "
           f"R {bar[0]['Republicans total']} I {won['Independent']} | {undecided} undecided")
@@ -267,20 +269,10 @@ def build_house(feed, overrides, stamp):
         "Majority line": HOUSE_MAJORITY,
         "last_refreshed": stamp,
     }]
-    write_csv(OUT / "house_bar.csv", bar)
+    write_table(OUT / "house_bar.csv", bar)
     print(f"  House: {sum(won.values())}/{HOUSE_SEATS} called | D {won['Democrat']} "
           f"R {won['Republican']} other {bar[0]['Others']}")
     return bar
-
-
-def write_csv(path, rows):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(".tmp")
-    with open(tmp, "w", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=list(rows[0]))
-        w.writeheader()
-        w.writerows(rows)
-    tmp.replace(path)  # atomic: Datawrapper/editors never see a half-written file
 
 
 # ---------- main ----------
