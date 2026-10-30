@@ -1,0 +1,19 @@
+{
+  "name": "us-midterms-2026-data",
+  "private": true,
+  "type": "module",
+  "description": "Data for the US midterms 2026 Datawrapper charts",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "sources": "node src/run.js sources",
+    "base": "node src/run.js base",
+    "update": "node src/run.js update",
+    "watch": "node src/run.js update --every 60",
+    "offline": "node src/run.js update --offline",
+    "worker:dev": "npx wrangler dev --config worker/wrangler.toml",
+    "worker:deploy": "npx wrangler deploy --config worker/wrangler.toml",
+    "worker:logs": "npx wrangler tail --config worker/wrangler.toml"
+  }
+}

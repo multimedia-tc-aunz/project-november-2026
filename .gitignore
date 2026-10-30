@@ -7,7 +7,10 @@ data/live/
 # Generated chart files (rebuilt by the scripts)
 output/
 
-# Python / temp files
-__pycache__/
-*.pyc
+# Temp files
 *.tmp
+
+# Cloudflare tooling
+.wrangler/
+.dev.vars
+node_modules/
