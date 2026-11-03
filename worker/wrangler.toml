@@ -1,26 +1,30 @@
-name = "midterms-data"
+name = "us-midterms-2026"
 main = "index.js"
 compatibility_date = "2025-09-01"
 
-# Runs every 5 minutes. Outside the election window below, the Worker skips all
-# but the on-the-hour run, so it's effectively hourly. No need to change this.
+# Fires every 5 minutes; the Worker decides whether to fetch (times below). No need to change this.
 [triggers]
 crons = ["*/5 * * * *"]
 
 [vars]
-# Every-5-minutes window, in UTC. Default: midnight Wed 4 Nov AEDT (8am Tue ET,
-# about 10 hours before the first polls close) to midnight Thu 5 Nov AEDT.
-FAST_START = "2026-11-03T13:00:00Z"
-FAST_END = "2026-11-05T13:00:00Z"
+# In UTC. Before FAST_START: no automatic fetches. FAST_START to FAST_END: every
+# 5 minutes. After FAST_END: hourly, for late calls.
+# Start: 10am AEDT Wed 4 Nov (6pm ET Tue, when the first polls close).
+# End: midnight AEDT at the end of Sat 7 Nov.
+FAST_START = "2026-11-03T23:00:00Z"
+FAST_END = "2026-11-07T13:00:00Z"
 
 # Where the latest results are stored between runs.
 # Create it with:  npx wrangler kv namespace create RESULTS   then paste the id here.
 [[kv_namespaces]]
 binding = "RESULTS"
-id = "PASTE_YOUR_KV_ID_HERE"
+id = "4e6b5e5dc23f4fbbac65e2a930ab38a7"
 
 # Bundle the CSVs from ../data as text.
 [[rules]]
 type = "Text"
 globs = ["**/*.csv"]
 fallthrough = true
+
+[observability]
+enabled = true

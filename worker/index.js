@@ -4,9 +4,12 @@
 //   /senate_map.csv  /senate_bar.csv  /house_bar.csv   (and the same names as .json)
 //   /                status: when it last fetched, any errors
 //   /refresh?token=… fetch now, instead of waiting for the next scheduled run
+//   /robots.txt      asks crawlers not to visit
 //
-// The schedule (wrangler.toml) fires every 5 minutes. Outside the election-night
-// window (FAST_START to FAST_END) it only does the on-the-hour run, so it's hourly.
+// The schedule (wrangler.toml) fires every 5 minutes, but the Worker decides what to do:
+//   before FAST_START          nothing (use /refresh to test)
+//   FAST_START to FAST_END     fetch every 5 minutes
+//   after FAST_END             fetch on the hour only, for late calls
 //
 // The Senate base table and manual overrides are bundled in when you deploy, so
 // after editing data/manual_overrides.csv or running `npm run sources`, redeploy.
@@ -31,8 +34,16 @@ const CORS = {
 
 // ---------- schedule ----------
 
-function inFastWindow(time, env) {
-  return time >= Date.parse(env.FAST_START) && time < Date.parse(env.FAST_END);
+/** "waiting", "every 5 minutes" or "hourly", for a time in milliseconds. */
+function phase(time, env) {
+  if (time < Date.parse(env.FAST_START)) return "waiting";
+  if (time < Date.parse(env.FAST_END)) return "every 5 minutes";
+  return "hourly";
+}
+
+function shouldRun(time, env) {
+  const p = phase(time, env);
+  return p === "every 5 minutes" || (p === "hourly" && new Date(time).getUTCMinutes() === 0);
 }
 
 /** Fetch both feeds and save the parsed results to KV. If one fails, its last good copy is kept. */
@@ -80,8 +91,11 @@ function tablesFor(state) {
 function statusBody(state, env, origin) {
   return {
     files: FILES.flatMap((f) => [`${origin}/${f}.csv`, `${origin}/${f}.json`]),
-    schedule: inFastWindow(Date.now(), env) ? "every 5 minutes (election window)" : "hourly",
-    election_window: `${env.FAST_START} to ${env.FAST_END}`,
+    schedule: {
+      waiting: `no automatic fetches until ${formatStamp(new Date(env.FAST_START))}`,
+      "every 5 minutes": `every 5 minutes until ${formatStamp(new Date(env.FAST_END))}, then hourly`,
+      hourly: "hourly",
+    }[phase(Date.now(), env)],
     last_run: state.ran_at || "never: visit /refresh or wait for the next scheduled run",
     senate_fetched_at: state.senate?.fetched_at || null,
     house_fetched_at: state.house?.fetched_at || null,
@@ -105,9 +119,7 @@ const asFile = (body, type) =>
 
 export default {
   async scheduled(event, env, ctx) {
-    const onTheHour = new Date(event.scheduledTime).getUTCMinutes() === 0;
-    if (!onTheHour && !inFastWindow(event.scheduledTime, env)) return; // hourly outside the window
-    ctx.waitUntil(update(env));
+    if (shouldRun(event.scheduledTime, env)) ctx.waitUntil(update(env));
   },
 
   async fetch(request, env) {
@@ -116,6 +128,13 @@ export default {
 
     const url = new URL(request.url);
     const path = url.pathname.replace(/^\/+|\/+$/g, "");
+
+    // Ask crawlers (GPTBot, ClaudeBot, Googlebot, ...) to stay away. Datawrapper doesn't check this.
+    if (path === "robots.txt") {
+      return new Response("User-agent: *\nDisallow: /\n", {
+        headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "public, max-age=86400" },
+      });
+    }
 
     if (path === "refresh") {
       const given = url.searchParams.get("token") || (request.headers.get("Authorization") || "").replace(/^Bearer /, "");

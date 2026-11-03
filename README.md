@@ -67,7 +67,7 @@ Each live fetch also saves a copy of the feed in `data/live/`. To rebuild from s
 
 The Worker fetches the results on a schedule and serves the chart files at a public web address. Link Datawrapper to that address and the charts update by themselves, without your laptop.
 
-- **Schedule:** hourly until election day, then every 5 minutes from midnight Wed 4 Nov AEDT to midnight Thu 5 Nov AEDT. It switches automatically. To change the window, edit `FAST_START` / `FAST_END` (in UTC) in `worker/wrangler.toml` and redeploy.
+- **Schedule:** no automatic fetches until **10am AEDT Wed 4 Nov** (when the first polls close). Then every 5 minutes until midnight AEDT at the end of Sat 7 Nov, then hourly for late calls. It switches automatically. To change the times, edit `FAST_START` / `FAST_END` (in UTC) in `worker/wrangler.toml` and redeploy. Before the start, the chart files still work: they show the Senate base data with every race "Awaiting results".
 - **Files:** `/senate_map.csv`, `/senate_bar.csv`, `/house_bar.csv`, plus the same names ending `.json`. They're identical to what `npm run update` writes.
 - **Status page:** the root address `/` shows when it last fetched, the seat counts, and any errors or warnings.
 
@@ -79,10 +79,10 @@ You need a free Cloudflare account. From the project folder:
 npx wrangler login                                                # sign in to Cloudflare in your browser
 npx wrangler kv namespace create RESULTS                          # prints an id: paste it into worker/wrangler.toml
 npx wrangler secret put REFRESH_TOKEN --config worker/wrangler.toml   # make up a password for /refresh
-npm run worker:deploy                                             # prints your address, e.g. https://midterms-data.<you>.workers.dev
+npm run worker:deploy                                             # prints your address, e.g. https://us-midterms-2026.<you>.workers.dev
 ```
 
-Then open `https://midterms-data.<you>.workers.dev/refresh?token=<your password>` once, so it fetches straight away instead of waiting for the next hour.
+Then open `https://us-midterms-2026.<you>.workers.dev/refresh?token=<your password>` once to check it can fetch the feed. Before 10am AEDT on 4 Nov it only fetches when you do this.
 
 ### In Datawrapper
 
@@ -97,8 +97,8 @@ On the **Upload data** step, choose **Link external dataset** and paste the CSV 
 ## Election-night runbook
 
 1. **Morning of (AEDT 4 Nov), before polls close:** `npm run sources`, check the `CHECK:` lines it prints, then `npm run worker:deploy`. This brings in the latest ratings, candidates and senators.
-2. **Check it's working:** open the Worker's status page (`/`). `errors` should be empty and `last_run` recent.
-3. **From midnight AEDT** it fetches every 5 minutes on its own. Visit `/refresh?token=…` whenever you want the latest straight away.
+2. **Check it's working:** visit `/refresh?token=…`, then open the Worker's status page (`/`). `errors` should be empty and `last_run` recent.
+3. **From 10am AEDT** it fetches every 5 minutes on its own. Visit `/refresh?token=…` whenever you want the latest straight away.
 4. **Feed broken or slow? Call races by hand** in `data/manual_overrides.csv`. These always win over the feed:
    ```
    chamber,key,winner_name,winner_party,note
