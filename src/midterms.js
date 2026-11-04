@@ -1,8 +1,7 @@
 // All the data logic for the US midterms charts.
 //
-// This file only turns data into tables: it doesn't read or write files and doesn't
-// know about Cloudflare, so the same code runs on your computer (src/run.js) and in
-// the Cloudflare Worker (worker/index.js).
+// This file only turns data into tables: it doesn't read or write files. src/run.js
+// does that, on your computer and in GitHub Actions.
 //
 //   1. Settings
 //   2. Senate base table: who holds each seat, candidates, ratings (built before election night)
@@ -394,9 +393,9 @@ const RESULT_COLS = ["result_status", "result_category", "dem_votes", "rep_votes
   "winner_party", "flip", "runoff", "results_updated", "override_note"];
 
 /** Download one NYT results feed ("senate" or "house"). Throws if it fails. */
-export async function fetchFeed(office, init = {}) {
+export async function fetchFeed(office) {
   const url = nytUrl(office);
-  const res = await fetch(url, { ...init, headers: { "User-Agent": "midterms-chart-updater/1.0" } });
+  const res = await fetch(url, { headers: { "User-Agent": "midterms-chart-updater/1.0" } });
   if (!res.ok) throw new Error(`HTTP ${res.status} from ${url}`);
   const data = await res.json();
   if (!Array.isArray(data.races)) throw new Error(`unexpected format from ${url}`);

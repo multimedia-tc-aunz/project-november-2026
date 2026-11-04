@@ -13,9 +13,6 @@
     "watch": "node src/run.js update --every 60",
     "push": "node src/run.js update --push",
     "watch:push": "node src/run.js update --push --every 60",
-    "offline": "node src/run.js update --offline",
-    "worker:dev": "npx wrangler dev --config worker/wrangler.toml",
-    "worker:deploy": "npx wrangler deploy --config worker/wrangler.toml",
-    "worker:logs": "npx wrangler tail --config worker/wrangler.toml"
+    "offline": "node src/run.js update --offline"
   }
 }

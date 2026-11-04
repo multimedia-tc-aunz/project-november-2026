@@ -1,6 +1,5 @@
-// Run the data pipeline on this computer: for setup, troubleshooting, or as a backup
-// to the Cloudflare Worker on election night. All the logic is in midterms.js; this
-// file just reads and writes files.
+// Runs the data pipeline, on your computer or in GitHub Actions (.github/workflows/update.yml).
+// All the logic is in midterms.js; this file just reads and writes files and pushes to GitHub.
 //
 //   node src/run.js sources                 download Wikipedia + senators, rebuild everything
 //   node src/run.js base                    rebuild data/base/senate_base.csv from data/sources/
