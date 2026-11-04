@@ -6,6 +6,7 @@ data/live/
 
 # Generated chart files (rebuilt by the scripts)
 output/
+output_zip/
 
 # Temp files
 *.tmp

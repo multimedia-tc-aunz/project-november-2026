@@ -1,0 +1,37 @@
+# Fetches the live results and publishes the chart files to the `data` branch, so they're at
+#   https://raw.githubusercontent.com/<you>/<repo>/data/senate_map.csv   (and the others)
+#
+# GitHub runs scheduled jobs late when it's busy (often 5–15 minutes, sometimes more), so on
+# election night also run `npm run watch:push` on your computer for every-minute updates.
+# To run it straight away: Actions tab → Update results → Run workflow.
+# To stop it: Actions tab → Update results → ••• → Disable workflow.
+
+name: Update results
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-results
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node src/run.js update --push
+        env:
+          GIT_AUTHOR_NAME: github-actions[bot]
+          GIT_AUTHOR_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+          GIT_COMMITTER_NAME: github-actions[bot]
+          GIT_COMMITTER_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com

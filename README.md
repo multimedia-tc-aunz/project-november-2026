@@ -30,13 +30,14 @@ Independents (King, Sanders) count as Democratic in `current_category`, because 
 
 ## How it's organised
 
-Everything is JavaScript and needs Node.js 20 or newer (already installed on this Mac). There's nothing to install.
+Everything is JavaScript and needs Node.js 22 or newer (already installed on this Mac). There's nothing to install.
 
 | File | What it is |
 |---|---|
 | `src/midterms.js` | **All the logic**: settings, building the Senate base table, reading the results feed, the seat counts, CSV/JSON. It doesn't read or write files, so the local runner and the Worker share it |
 | `src/run.js` | Runs it **on your computer**: downloads sources and writes `data/` and `output/` |
-| `worker/` | Runs it **on Cloudflare**: the schedule and the web addresses. No data logic |
+| `.github/workflows/update.yml` | Runs it **on GitHub** every 5 minutes and publishes to the `data` branch |
+| `worker/` | The old Cloudflare Worker (no longer used) |
 | `data/sources/` | Downloaded sources (Wikipedia, senators) |
 | `data/base/senate_base.csv` | Everything that doesn't change on election night. Built from `data/sources/` |
 | `data/manual_overrides.csv` | Races you call by hand |
@@ -49,8 +50,10 @@ From the project folder:
 |---|---|
 | `npm run sources` | Re-downloads ratings, candidates and senators, then rebuilds everything |
 | `npm run base` | Rebuilds `data/base/senate_base.csv` from the files already in `data/sources/` |
-| `npm run update` | Fetches the live results once and writes `output/` |
+| `npm run update` | Fetches the live results once and writes `output/`, plus a zip of it at `output_zip/output.zip` |
 | `npm run watch` | Same, every 60 seconds, until you press Ctrl+C |
+| `npm run push` | `update`, then publishes the chart files to GitHub (see below) |
+| `npm run watch:push` | Same, every 60 seconds |
 | `npm run offline` | Rebuilds `output/` without fetching (base data + manual overrides only) |
 
 Each live fetch also saves a copy of the feed in `data/live/`. To rebuild from saved feed files instead of fetching, run:
@@ -63,7 +66,45 @@ Each live fetch also saves a copy of the feed in `data/live/`. To rebuild from s
 - **`all_raters_rating`** uses the same method across all 11 forecasters on Wikipedia's table (Cook, DDHQ, Economist, FiftyPlusOne, Fox, IE, NBC, RCP, Sabato, Silver Bulletin, Split Ticket), for comparison. Each one is also its own `rating_*` column.
 - **`predicted_flip`** = the consensus favours the party that doesn't hold the seat.
 
-## Cloudflare Worker (hosted, automatic updates)
+## GitHub (hosted files, automatic updates)
+
+The chart files are published to a branch called `data` in the GitHub repo, which holds nothing else. Datawrapper links to the raw files:
+
+```
+https://raw.githubusercontent.com/<you>/<repo>/data/senate_map.csv
+https://raw.githubusercontent.com/<you>/<repo>/data/senate_bar.csv
+https://raw.githubusercontent.com/<you>/<repo>/data/house_bar.csv
+```
+
+(and the same names ending `.json`). GitHub caches these for up to 5 minutes.
+
+Two things update the branch:
+
+- **GitHub Actions** (`.github/workflows/update.yml`) runs every 5 minutes without your laptop. GitHub often runs scheduled jobs late when it's busy, so treat it as the backup. Run it straight away from **Actions → Update results → Run workflow**. Turn it off from the same page (**••• → Disable workflow**).
+- **`npm run watch:push`** on your computer updates every minute. Use this on election night.
+
+Both are safe to run at once. Each push replaces the branch with one fresh commit, so the repo doesn't grow. If a feed fetch fails, nothing is pushed, and the last good files stay up.
+
+The repo must be **public** for the raw links to work without a login. It's also free for Actions minutes when public.
+
+### One-time setup
+
+1. On github.com, click **New repository**. Name it (e.g. `us-midterms-2026`), set it to **Public**, and don't add a README, .gitignore or licence.
+2. From the project folder, connect it and push (GitHub shows these lines too):
+   ```
+   git remote add origin https://github.com/<you>/<repo>.git
+   git push -u origin main
+   ```
+3. `npm run push` publishes the first copy of the files. Open one of the raw links above to check.
+4. In the repo on GitHub, open the **Actions** tab and enable workflows if it asks.
+
+### Calling a race by hand
+
+Edit `data/manual_overrides.csv` (format in the runbook below). Then either commit and push it to `main`, so the next Actions run picks it up, or just run `npm run push` on your computer. If you only do it locally, the next Actions run will publish without your override until you push it to `main`. So do both.
+
+## Cloudflare Worker (no longer used)
+
+Kept for reference. It was retired because the free address was flooded with outside requests.
 
 The Worker fetches the results on a schedule and serves the chart files at a public web address. Link Datawrapper to that address and the charts update by themselves, without your laptop.
 
@@ -96,9 +137,9 @@ On the **Upload data** step, choose **Link external dataset** and paste the CSV 
 
 ## Election-night runbook
 
-1. **Morning of (AEDT 4 Nov), before polls close:** `npm run sources`, check the `CHECK:` lines it prints, then `npm run worker:deploy`. This brings in the latest ratings, candidates and senators.
-2. **Check it's working:** visit `/refresh?token=…`, then open the Worker's status page (`/`). `errors` should be empty and `last_run` recent.
-3. **From 10am AEDT** it fetches every 5 minutes on its own. Visit `/refresh?token=…` whenever you want the latest straight away.
+1. **Before polls close:** `npm run sources`, check the `CHECK:` lines it prints, then commit and push to `main`. This brings in the latest ratings, candidates and senators.
+2. **Start the updates:** `npm run watch:push` and leave it running. GitHub Actions keeps going as a backup if the laptop sleeps.
+3. **Check it's working:** open a raw link (or the `data` branch on GitHub). `last_refreshed` should be recent.
 4. **Feed broken or slow? Call races by hand** in `data/manual_overrides.csv`. These always win over the feed:
    ```
    chamber,key,winner_name,winner_party,note
@@ -106,10 +147,7 @@ On the **Upload data** step, choose **Link external dataset** and paste the CSV 
    house,CA-1,Doug LaMalfa,R,AP call
    ```
    `key` = state code for the Senate, state-district for the House (e.g. `CA-1`; at-large seats are `-1`, e.g. `AK-1`). `winner_party` = D / R / I.
-   Then run `npm run worker:deploy` (it shows straight away). Without the Worker, run `npm run offline` and re-upload `output/`.
-5. **Backup if Cloudflare has problems:** `npm run watch` keeps `output/` up to date on your computer. Re-upload those files to Datawrapper.
-
-The free Cloudflare plan covers this easily. The Worker saves results once per run (at most 288 a day, against a free limit of 1,000), and it keeps a 30-second in-memory copy, so busy charts don't use up the free storage reads.
+   Then commit and push it to `main` (for Actions). `watch:push` picks it up on its next run.
 
 ## Sources
 
@@ -120,7 +158,7 @@ The free Cloudflare plan covers this easily. The Worker saves results once per r
 
 ## Caveats
 
-- **The NYT feed is unofficial.** It isn't documented, and it could change format or block requests (including from Cloudflare's servers: check the Worker's status page). The 2026 files went live on 29 Oct and have the same structure as 2022 and 2024. If the address changes, edit `nytUrl` in `src/midterms.js`. Have someone ready to use the manual overrides file.
+- **The NYT feed is unofficial.** It isn't documented, and it could change format or block requests (including from GitHub's servers: check the Actions tab for failed runs). The 2026 files went live on 29 Oct and have the same structure as 2022 and 2024. If the address changes, edit `nytUrl` in `src/midterms.js`. Have someone ready to use the manual overrides file.
 - **Wikipedia is crowd-edited.** Spot-check the Toss-up / Lean races against cookpolitical.com, insideelections.com and centerforpolitics.org before publishing.
 - **Hand fixes** in `src/midterms.js`: Alaska's nominees (Peltola D vs Sullivan R; Wikipedia's infobox is blank because of the top-four primary). Minnesota's DFL is treated as Democratic.
 - **Appointed senators:** Oklahoma (Alan Armstrong, not running) and South Carolina (Darline Graham, running) have appointees in the seats up this year. Both appear consistently in both sources.
